@@ -1,5 +1,5 @@
 // ==UserScript==
-// @name         VietPhrase Laongu API
+// @name         VietPhrase duongden - credit Laongu
 // @namespace    http://tampermonkey.net/
 // @version      1.9
 // @description  Đọc và sửa Names VietPhrase từ api github
