@@ -77,17 +77,17 @@ class Dictionary {
     // Phương thức tải toàn bộ từ điển từ các nguồn khác nhau
     async loadDictionaries() {
         // Tải từ điển Names
-        const loadNames = this.readDictionaryFile('https://laongu.github.io/Names.txt', (key, value) => {
+        const loadNames = this.readDictionaryFile('https://duongden.github.io/Names.txt', (key, value) => {
             this.insert(key, value);
         });
 
         // Tải từ điển Việt-Trung
-        const loadVietPhrase = this.readDictionaryFile('https://laongu.github.io/VietPhrase.txt', (key, value) => {
+        const loadVietPhrase = this.readDictionaryFile('https://duongden.github.io/VietPhrase.txt', (key, value) => {
             this.insert(key, value);
         });
 
         // Tải từ điển phụ âm tiếng Trung
-        const loadChinesePhienAm = this.readDictionaryFile('https://laongu.github.io/ChinesePhienAmWords.txt', (key, value) => {
+        const loadChinesePhienAm = this.readDictionaryFile('https://duongden.github.io/ChinesePhienAmWords.txt', (key, value) => {
             this.phienAmDictionary.set(key, value);
         });
 
