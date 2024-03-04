@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Phân tích</title>
+    <style>
+        ul {
+            list-style-type: none;
+            padding: 0;
+        }
+
+        li {
+            margin-bottom: 10px;
+            padding: 10px;
+            border: 1px solid #ddd;
+            background-color: #f9f9f9;
+        }
+
+        button {
+            margin-left: 10px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Phân tích</h1>
+    <p><a href="/">Dịch văn bản</a> | <a href="/upload.html">Dịch từ tệp txt</a> | <a href="/phantich.html">Phân tích</a></p>
+    <form id="searchForm">
+        <label for="searchTerm">Tìm nhiều bởi dấu phẩy (,):</label>
+        <input type="text" placeholder="mỹ nhân, hình ảnh" id="searchTerm" name="searchTerm" required>
+        <button type="submit">Tìm kiếm</button>
+    </form>
+    <div id="alert"></div>
+    <div id="ghep"></div>
+    <div id="results"></div>
+
+    <script>
+
+        let vietPhraseContent = null;
+
+        document.getElementById('searchForm').addEventListener('submit', async function (event) {
+            event.preventDefault(); // Ngăn chặn hành động mặc định của biểu mẫu
+            const searchTerm = document.getElementById('searchTerm').value;
+            const searchTermsArray = searchTerm.split(',').map(term => term.trim()).filter(term => term !== '');
+
+            const allResults = [];
+
+            const displayNames = searchTermsArray.map(term => term);
+
+            for (let i = 0; i < searchTermsArray.length; i++) {
+                const term = searchTermsArray[i];
+                const result = await search(term);
+                
+                // Lọc bỏ giá trị rỗng, khoảng trắng hoặc null
+                const filteredResult = result.filter(value => value[0] && value[0].trim() !== '');
+                
+                allResults.push({ name: displayNames[i], results: filteredResult });
+            }
+
+            displayResults(allResults);
+        });
+
+        function displayResults(allResults) {
+            const searchTerm = allResults.map(item => item.name).join(', ');
+            const resultsElement = document.getElementById('results');
+            const ghepElement = document.getElementById('ghep');
+            document.getElementById('searchTerm').value = searchTerm;
+
+            resultsElement.innerHTML = '';
+            ghepElement.innerHTML = ''; // Xóa nội dung trước đó
+
+            let mergedValues = [];
+
+            allResults.forEach(({ name, results }) => {
+                resultsElement.innerHTML += `<p>Kết quả từ câu "${name}":</p>`;
+                if (results.length >= 5) {
+                    const topFiveResults = results.slice(0, 5);
+                    resultsElement.innerHTML += "<ul>";
+                    topFiveResults.forEach(result => {
+                        const cleanResult = result[0].replace(/\s/g, '');
+                        resultsElement.innerHTML += `<li>${cleanResult} → ${result[1]} <button onclick="copyToClipboard('${cleanResult}')">Copy</button></li>`;
+                    });
+                    resultsElement.innerHTML += "</ul>";
+                } else {
+                    resultsElement.innerHTML += "<p>Không có kết quả nào.</p>";
+                }
+
+                // Thêm giá trị đầu tiên vào mảng (loại bỏ khoảng trắng)
+                mergedValues.push(results[0][0].replace(/\s/g, ''));
+                console.log(results[0][0]);
+            });
+
+            // Ghép giá trị đầu tiên từ mỗi câu
+            const mergedString = mergedValues.join('');
+            ghepElement.innerHTML = `<p>Ghép giá trị đầu tiên: ${mergedString} <button onclick="copyToClipboard('${mergedString}')">Copy</button></li></p>`;
+        }
+
+        async function search(searchTerm) {
+            if (!vietPhraseContent) {
+                vietPhraseContent = await fetchVietPhraseContent();
+            }
+
+            const soLuongTu = countWords(searchTerm);
+            const foundWords = [];
+            const regex = new RegExp(searchTerm, 'i');
+
+            const lines = vietPhraseContent.split('\n');
+
+            lines.forEach(line => {
+                if (regex.test(line)) {
+                    const [key, value] = line.split('=');
+                    foundWords.push(key);
+                }
+            });
+
+            const foundWordsText = foundWords.join(' ');
+            const content = strSplit(foundWordsText, 1);
+
+            const stats = buildStats(content, soLuongTu);
+            const sortedResults = Object.entries(stats).sort((a, b) => b[1] - a[1]);
+
+            return sortedResults;
+        }
+
+        async function fetchVietPhraseContent() {
+            const response = await fetch('VietPhrase.txt');
+            return response.text();
+        }
+
+        function strSplit(string, length) {
+            const characters = Array.from(string);
+
+            if (length === null || length < 1) {
+                return characters;
+            }
+
+            const result = [];
+            for (let i = 0; i < characters.length; i += length) {
+                result.push(characters.slice(i, i + length).join(''));
+            }
+
+            return result;
+        }
+
+        function countWords(input) {
+            const wordArray = input.split(' ');
+            return wordArray.length;
+        }
+
+        function removeChinesePunctuation(inputString) {
+            return inputString.replace(/[\p{P}]/ug, '');
+        }
+
+        function buildStats(input, num) {
+            const results = {};
+
+            for (let key = 0; key < input.length - num + 1; key++) {
+                let phrase = '';
+
+                for (let i = 0; i < num; i++) {
+                    if (i !== 0) phrase += ' ';
+
+                    if (key + i < input.length) {
+                        phrase += input[key + i].toLowerCase();
+                    }
+                }
+
+                if (!results[phrase]) {
+                    results[phrase] = 1;
+                } else {
+                    results[phrase]++;
+                }
+            }
+
+            return results;
+        }
+
+        function copyToClipboard(text) {
+            const textarea = document.createElement('textarea');
+            textarea.value = text;
+            document.body.appendChild(textarea);
+            textarea.select();
+            document.execCommand('copy');
+            document.body.removeChild(textarea);
+
+            const resultsElement = document.getElementById('alert');
+            resultsElement.innerHTML = `<p>Đã sao chép: ${text}</p>`;
+        }
+
+    </script>
+</body>
+</html>
